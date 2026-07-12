@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>通話ルーム</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --surface:#f7f8fa;
+    --surface-hover:#eef0f3;
+    --border:#e3e6ea;
+    --text:#16181d;
+    --text-secondary:#6b7280;
+    --accent:#3d5afe;
+    --accent-hover:#2f47d1;
+    --accent-soft:#eef1ff;
+    --danger:#e03131;
+    --danger-soft:#fdeaea;
+    --radius-sm:8px;
+    --radius-md:14px;
+    --radius-lg:22px;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.06);
+    --shadow-md:0 6px 20px rgba(16,24,40,.08);
+    --font-jp:'Noto Sans JP',system-ui,-apple-system,'Hiragino Sans',sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-jp);
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    justify-content:center;
+  }
+  #app{
+    width:100%;
+    max-width:560px;
+    min-height:100vh;
+    padding:24px 20px 40px;
+    display:flex;
+    flex-direction:column;
+  }
+  .screen{display:none;flex:1;flex-direction:column;}
+  .screen.active{display:flex;}
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:auto;
+    padding-bottom:48px;
+  }
+  .brand-mark{
+    width:34px;height:34px;border-radius:10px;
+    background:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-family:var(--font-mono);font-weight:700;font-size:14px;
+  }
+  .brand-name{font-weight:700;font-size:15px;letter-spacing:.02em;color:var(--text-secondary);}
+
+  .center-stack{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    gap:28px;
+  }
+  h1{font-size:26px;font-weight:800;margin:0;letter-spacing:-.01em;}
+  p.lead{color:var(--text-secondary);font-size:14.5px;line-height:1.7;margin:0;max-width:340px;}
+
+  .btn{
+    appearance:none;border:none;cursor:pointer;
+    font-family:var(--font-jp);
+    font-weight:700;font-size:15px;
+    border-radius:var(--radius-md);
+    padding:15px 28px;
+    transition:transform .12s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--accent);color:#fff;box-shadow:var(--shadow-md);}
+  .btn-primary:hover{background:var(--accent-hover);}
+  .btn-primary:disabled{background:var(--border);color:var(--text-secondary);cursor:not-allowed;box-shadow:none;}
+  .btn-block{width:100%;}
+  .btn-ghost{background:var(--surface);color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{background:var(--surface-hover);}
+  .btn-icon{
+    width:46px;height:46px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--surface);border:1px solid var(--border);
+    color:var(--text);flex-shrink:0;
+  }
+  .btn-icon.danger-active{background:var(--danger);border-color:var(--danger);color:#fff;}
+
+  .field{width:100%;text-align:left;margin-bottom:18px;}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;letter-spacing:.03em;}
+  .field input[type=text]{
+    width:100%;font-family:var(--font-jp);font-size:16px;
+    padding:14px 16px;border-radius:var(--radius-sm);
+    border:1.5px solid var(--border);background:var(--surface);
+    color:var(--text);outline:none;transition:border-color .15s ease;
+  }
+  .field input[type=text]:focus{border-color:var(--accent);background:var(--bg);}
+
+  .card{
+    width:100%;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:24px;
+    text-align:left;
+  }
+
+  .room-code-chip{
+    display:inline-flex;align-items:center;gap:10px;
+    font-family:var(--font-mono);font-weight:700;font-size:15px;
+    letter-spacing:.06em;
+    background:var(--accent-soft);color:var(--accent);
+    padding:10px 16px;border-radius:999px;
+  }
+  .copy-btn{
+    background:none;border:none;cursor:pointer;color:var(--accent);
+    font-family:var(--font-jp);font-weight:700;font-size:12.5px;
+    padding:4px;text-decoration:underline;text-underline-offset:2px;
+  }
+
+  .avatar-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  .avatar{
+    width:32px;height:32px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:700;font-size:13px;flex-shrink:0;
+  }
+  .who-list{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
+  .who-row{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);}
+  .empty-note{color:var(--text-secondary);font-size:13.5px;}
+
+  /* --- call screen --- */
+  .call-header{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:18px;gap:10px;
+  }
+  .room-tag{
+    font-family:var(--font-mono);font-size:13px;font-weight:700;
+    color:var(--text-secondary);letter-spacing:.04em;
+  }
+  .warning-banner{
+    font-size:12px;color:var(--danger);background:var(--danger-soft);
+    padding:8px 12px;border-radius:var(--radius-sm);margin-bottom:14px;
+    display:none;font-weight:700;
+  }
+  .warning-banner.show{display:block;}
+
+  .participant-list{
+    display:flex;flex-direction:column;gap:10px;
+    flex:1;overflow-y:auto;
+    padding-bottom:16px;
+  }
+  .participant{
+    display:flex;align-items:center;gap:14px;
+    background:var(--surface);border:1.5px solid var(--border);
+    border-radius:var(--radius-md);padding:14px 16px;
+    transition:border-color .2s ease, box-shadow .2s ease;
+  }
+  .participant.speaking{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .participant .avatar{width:42px;height:42px;font-size:16px;}
+  .participant-info{flex:1;min-width:0;}
+  .participant-name{
+    font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .you-tag{font-size:11px;color:var(--accent);font-weight:700;}
+  .mute-tag{font-size:11px;color:var(--danger);font-weight:700;display:none;}
+  .mute-tag.show{display:inline;}
+  .participant-time{
+    font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);margin-top:2px;
+  }
+  .volume-control{display:flex;align-items:center;gap:8px;width:120px;flex-shrink:0;}
+  .volume-control input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:4px;
+    border-radius:4px;background:var(--border);outline:none;
+  }
+  .volume-control input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:var(--accent);cursor:pointer;border:2px solid #fff;box-shadow:var(--shadow-sm);
+  }
+  .volume-control input[type=range]::-moz-range-thumb{
+    width:16px;height:16px;border-radius:50%;background:var(--accent);
+    cursor:pointer;border:2px solid #fff;box-shadow:var(--shadow-sm);
+  }
+  .volume-val{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);width:32px;text-align:right;flex-shrink:0;}
+
+  .call-controls{
+    display:flex;justify-content:center;align-items:center;gap:16px;
+    padding-top:18px;border-top:1px solid var(--border);
+  }
+
+  .error-icon{font-size:36px;margin-bottom:6px;}
+  .hidden{display:none !important;}
+
+  @media (max-width:400px){
+    .volume-control{width:96px;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="brand">
+    <div class="brand-mark">TV</div>
+    <div class="brand-name">通話ルーム</div>
+  </div>
+
+  <!-- 1. ランディング: 部屋を建てるのみ -->
+  <section id="screen-landing" class="screen">
+    <div class="center-stack">
+      <h1>通話ルームを始める</h1>
+      <p class="lead">ボタンひとつで部屋を作成できます。参加者にはURLを共有してください。</p>
+      <button class="btn btn-primary" id="btn-create-room">部屋を建てる</button>
+    </div>
+  </section>
+
+  <!-- 2. 部屋作成後の名前入力 -->
+  <section id="screen-name-create" class="screen">
+    <div class="center-stack">
+      <h1>名前を入力</h1>
+      <p class="lead">通話中に他の参加者へ表示される名前です。</p>
+      <div class="field" style="max-width:320px;">
+        <label for="input-name-create">表示名</label>
+        <input type="text" id="input-name-create" maxlength="20" placeholder="例: たろう" autocomplete="off">
+      </div>
+      <button class="btn btn-primary btn-block" style="max-width:320px;" id="btn-enter-create" disabled>通話をはじめる</button>
+    </div>
+  </section>
+
+  <!-- 3. 参加URL経由: 参加者リスト表示 + 名前入力 -->
+  <section id="screen-join" class="screen">
+    <div class="center-stack" style="justify-content:flex-start;padding-top:24px;">
+      <h1>ルームに参加</h1>
+      <p class="lead" style="margin-bottom:-8px;">名前を入力すると参加できます。</p>
+
+      <div class="card">
+        <div class="room-code-chip" id="join-room-code-chip">----------</div>
+        <div style="margin-top:16px;">
+          <label style="font-size:12px;font-weight:700;color:var(--text-secondary);letter-spacing:.03em;">現在参加中</label>
+          <div class="who-list" id="join-who-list">
+            <div class="empty-note">まだ誰も参加していません</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:6px;">
+        <label for="input-name-join">表示名</label>
+        <input type="text" id="input-name-join" maxlength="20" placeholder="例: はなこ" autocomplete="off">
+      </div>
+      <button class="btn btn-primary btn-block" id="btn-enter-join" disabled>参加</button>
+    </div>
+  </section>
+
+  <!-- 4. 通話画面 -->
+  <section id="screen-call" class="screen">
+    <div class="call-header">
+      <div class="room-code-chip" id="call-room-code-chip">----------</div>
+      <button class="copy-btn" id="btn-copy-link">招待リンクをコピー</button>
+    </div>
+    <div class="warning-banner" id="warning-banner">人数が多くなっています。音質が不安定になる場合があります。</div>
+    <div class="participant-list" id="participant-list"></div>
+    <div class="call-controls">
+      <button class="btn-icon" id="btn-mute" title="ミュート">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" id="icon-mute-on"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" id="icon-mute-off" class="hidden"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-5.12-2.12M9 9v3a3 3 0 0 0 4.24 2.74M5 11a7 7 0 0 0 10.5 6.1M19 11a7 7 0 0 1-1.11 3.78M12 18v3M3 3l18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="btn btn-ghost" id="btn-leave">退出する</button>
+    </div>
+  </section>
+
+  <!-- 5. エラー -->
+  <section id="screen-error" class="screen">
+    <div class="center-stack">
+      <div class="error-icon">⚠️</div>
+      <h1 id="error-title">エラー</h1>
+      <p class="lead" id="error-message">問題が発生しました。</p>
+      <a class="btn btn-ghost" href="./">トップに戻る</a>
+    </div>
+  </section>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getDatabase, ref, set, get, push, update, remove,
+  onValue, onChildAdded, onDisconnect
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+/* ---------- Firebase 初期化 ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyBGIBfHXVZuXu6dFxnt6kKxdTfO-PV8tyY",
+  authDomain: "p2p-voice-call.firebaseapp.com",
+  databaseURL: "https://p2p-voice-call-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "p2p-voice-call",
+  storageBucket: "p2p-voice-call.firebasestorage.app",
+  messagingSenderId: "50123439885",
+  appId: "1:50123439885:web:029b3bdc10eee6cb1dba44"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getDatabase(fbApp);
+
+/* ---------- 定数・状態 ---------- */
+const ID_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz";
+const AVATAR_COLORS = ["#3d5afe","#00897b","#f4511e","#8e24aa","#43a047","#fb8c00","#5e35b1","#00acc1"];
+const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }];
+const WARNING_THRESHOLD = 5;
+
+let roomId = null;
+let myId = null;
+let myName = null;
+let audioCtx = null;
+let localStream = null;
+let localMuted = false;
+let peers = {};        // peerId -> { pc, gainNode, analyser, pendingCandidates:[] }
+let participants = {}; // peerId -> { name, joinedAt, muted }
+let knownAtJoin = new Set();
+let durationTimer = null;
+
+/* ---------- ユーティリティ ---------- */
+function generateRoomId(){
+  let s = "";
+  for(let i=0;i<10;i++) s += ID_CHARS[Math.floor(Math.random()*ID_CHARS.length)];
+  return s;
+}
+function avatarColor(name){
+  let h = 0;
+  for(let i=0;i<name.length;i++) h = (h*31 + name.charCodeAt(i)) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[h];
+}
+function initials(name){
+  return (name || "?").trim().slice(0,1).toUpperCase();
+}
+function formatDuration(ms){
+  const s = Math.max(0, Math.floor(ms/1000));
+  const h = Math.floor(s/3600);
+  const m = Math.floor((s%3600)/60);
+  const sec = s%60;
+  const pad = n => String(n).padStart(2,"0");
+  return h>0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
+}
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+function showError(title, message){
+  document.getElementById("error-title").textContent = title;
+  document.getElementById("error-message").textContent = message;
+  showScreen("screen-error");
+}
+
+/* ---------- 画面遷移: URL判定 ---------- */
+async function init(){
+  const params = new URLSearchParams(location.search);
+  const paramRoom = params.get("room");
+
+  document.getElementById("btn-create-room").addEventListener("click", onCreateRoomClick);
+  document.getElementById("btn-enter-create").addEventListener("click", onEnterCreateClick);
+  document.getElementById("btn-enter-join").addEventListener("click", onEnterJoinClick);
+  document.getElementById("btn-mute").addEventListener("click", toggleMute);
+  document.getElementById("btn-leave").addEventListener("click", () => location.href = location.pathname);
+  document.getElementById("btn-copy-link").addEventListener("click", copyInviteLink);
+
+  document.getElementById("input-name-create").addEventListener("input", e => {
+    document.getElementById("btn-enter-create").disabled = e.target.value.trim().length === 0;
+  });
+  document.getElementById("input-name-join").addEventListener("input", e => {
+    document.getElementById("btn-enter-join").disabled = e.target.value.trim().length === 0;
+  });
+
+  if(paramRoom){
+    roomId = paramRoom;
+    const snap = await get(ref(db, `rooms/${roomId}/meta`));
+    if(!snap.exists()){
+      showError("部屋が見つかりません", "URLが間違っているか、部屋が削除された可能性があります。");
+      return;
+    }
+    document.getElementById("join-room-code-chip").textContent = roomId;
+    watchJoinPreview();
+    showScreen("screen-join");
+  } else {
+    showScreen("screen-landing");
+  }
+}
+
+/* ---------- 部屋作成 ---------- */
+async function onCreateRoomClick(){
+  const btn = document.getElementById("btn-create-room");
+  btn.disabled = true;
+  btn.textContent = "作成中...";
+  let candidate;
+  for(let i=0;i<5;i++){
+    candidate = generateRoomId();
+    const snap = await get(ref(db, `rooms/${candidate}/meta`));
+    if(!snap.exists()) break;
+  }
+  roomId = candidate;
+  await set(ref(db, `rooms/${roomId}/meta`), { createdAt: Date.now() });
+  document.getElementById("call-room-code-chip").textContent = roomId;
+  history.replaceState(null, "", `?room=${roomId}`);
+  showScreen("screen-name-create");
+}
+
+function onEnterCreateClick(){
+  const name = document.getElementById("input-name-create").value.trim();
+  if(!name) return;
+  joinRoom(name);
+}
+
+/* ---------- 参加前プレビュー(参加者リストの先行表示) ---------- */
+function watchJoinPreview(){
+  onValue(ref(db, `rooms/${roomId}/participants`), snap => {
+    const data = snap.val() || {};
+    const list = document.getElementById("join-who-list");
+    const names = Object.values(data);
+    if(names.length === 0){
+      list.innerHTML = '<div class="empty-note">まだ誰も参加していません</div>';
+      return;
+    }
+    list.innerHTML = "";
+    names.forEach(p => {
+      const row = document.createElement("div");
+      row.className = "who-row";
+      row.innerHTML = `<div class="avatar" style="background:${avatarColor(p.name)}">${initials(p.name)}</div><span>${escapeHtml(p.name)}</span>`;
+      list.appendChild(row);
+    });
+  });
+}
+
+function onEnterJoinClick(){
+  const name = document.getElementById("input-name-join").value.trim();
+  if(!name) return;
+  joinRoom(name);
+}
+
+function escapeHtml(str){
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ---------- 実際の入室処理 ---------- */
+async function joinRoom(name){
+  myName = name;
+  myId = push(ref(db, `rooms/${roomId}/participants`)).key;
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  await audioCtx.resume();
+
+  try{
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  }catch(e){
+    showError("マイクを使用できません", "マイクへのアクセスが許可されていないか、対応するデバイスが見つかりません。");
+    return;
+  }
+
+  const myRef = ref(db, `rooms/${roomId}/participants/${myId}`);
+  await set(myRef, { name: myName, joinedAt: Date.now(), muted: false });
+  onDisconnect(myRef).remove();
+
+  document.getElementById("call-room-code-chip").textContent = roomId;
+  showScreen("screen-call");
+
+  // 既存メンバーのスナップショットを取得し、先方への発信(offer)は自分側から行う
+  const existingSnap = await get(ref(db, `rooms/${roomId}/participants`));
+  const existingData = existingSnap.val() || {};
+  Object.keys(existingData).forEach(pid => knownAtJoin.add(pid));
+  knownAtJoin.add(myId);
+
+  // 参加者リストの購読(UI描画 + 接続管理)
+  onValue(ref(db, `rooms/${roomId}/participants`), snap => {
+    const data = snap.val() || {};
+    handleParticipantsUpdate(data);
+  });
+
+  // 自分宛のシグナルを購読
+  onChildAdded(ref(db, `rooms/${roomId}/signals/${myId}`), snap => {
+    const msg = snap.val();
+    handleSignal(msg);
+    remove(snap.ref);
+  });
+
+  // 既存メンバーへ発信
+  Object.keys(existingData).forEach(pid => {
+    if(pid !== myId) connectToPeer(pid, true);
+  });
+
+  // 経過時間の定期更新
+  durationTimer = setInterval(renderAllDurations, 1000);
+
+  // 音声レベル(発話インジケーター)監視ループ
+  requestAnimationFrame(speakingLoop);
+
+  // 自分の発話解析用(出力には繋がない)
+  setupLocalAnalyser();
+}
+
+/* ---------- 参加者リスト更新 ---------- */
+function handleParticipantsUpdate(data){
+  const prevIds = new Set(Object.keys(participants));
+  const nextIds = new Set(Object.keys(data));
+  participants = data;
+
+  // 退出者のクリーンアップ
+  prevIds.forEach(pid => {
+    if(!nextIds.has(pid)){
+      cleanupPeer(pid);
+    }
+  });
+
+  // 新規参加者(自分がすでに参加済みの状態で後から入ってきた人)は
+  // 相手側からofferが飛んでくるのでここでは待つのみ
+  nextIds.forEach(pid => {
+    if(pid !== myId && !knownAtJoin.has(pid)){
+      knownAtJoin.add(pid);
+    }
+  });
+
+  renderParticipants();
+  updateWarningBanner(nextIds.size);
+}
+
+function updateWarningBanner(count){
+  document.getElementById("warning-banner").classList.toggle("show", count >= WARNING_THRESHOLD);
+}
+
+/* ---------- WebRTC 接続 ---------- */
+function connectToPeer(peerId, isInitiator){
+  if(peers[peerId]) return;
+
+  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  const peerState = { pc, gainNode: null, analyser: null, pendingCandidates: [], remoteSet: false, dataEl: null };
+  peers[peerId] = peerState;
+
+  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+  pc.onicecandidate = e => {
+    if(e.candidate){
+      push(ref(db, `rooms/${roomId}/signals/${peerId}`), {
+        from: myId, type: "candidate", candidate: e.candidate.toJSON()
+      });
+    }
+  };
+
+  pc.ontrack = e => {
+    const remoteStream = e.streams[0];
+    const source = audioCtx.createMediaStreamSource(remoteStream);
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.value = 1.0;
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(gainNode);
+    gainNode.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    peerState.gainNode = gainNode;
+    peerState.analyser = analyser;
+  };
+
+  if(isInitiator){
+    pc.createOffer().then(offer => pc.setLocalDescription(offer)).then(() => {
+      push(ref(db, `rooms/${roomId}/signals/${peerId}`), {
+        from: myId, type: "offer", sdp: pc.localDescription.toJSON()
+      });
+    });
+  }
+}
+
+async function handleSignal(msg){
+  if(!msg) return;
+  const { from, type } = msg;
+  if(!peers[from]) connectToPeer(from, false);
+  const peerState = peers[from];
+  const pc = peerState.pc;
+
+  if(type === "offer"){
+    await pc.setRemoteDescription(msg.sdp);
+    peerState.remoteSet = true;
+    flushPendingCandidates(peerState);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    push(ref(db, `rooms/${roomId}/signals/${from}`), {
+      from: myId, type: "answer", sdp: pc.localDescription.toJSON()
+    });
+  } else if(type === "answer"){
+    await pc.setRemoteDescription(msg.sdp);
+    peerState.remoteSet = true;
+    flushPendingCandidates(peerState);
+  } else if(type === "candidate"){
+    if(peerState.remoteSet){
+      pc.addIceCandidate(msg.candidate).catch(()=>{});
+    } else {
+      peerState.pendingCandidates.push(msg.candidate);
+    }
+  }
+}
+
+function flushPendingCandidates(peerState){
+  peerState.pendingCandidates.forEach(c => peerState.pc.addIceCandidate(c).catch(()=>{}));
+  peerState.pendingCandidates = [];
+}
+
+function cleanupPeer(peerId){
+  const peerState = peers[peerId];
+  if(peerState){
+    peerState.pc.close();
+    delete peers[peerId];
+  }
+  delete participants[peerId];
+}
+
+/* ---------- ミュート ---------- */
+function toggleMute(){
+  localMuted = !localMuted;
+  localStream.getAudioTracks().forEach(t => t.enabled = !localMuted);
+  document.getElementById("icon-mute-on").classList.toggle("hidden", localMuted);
+  document.getElementById("icon-mute-off").classList.toggle("hidden", !localMuted);
+  document.getElementById("btn-mute").classList.toggle("danger-active", localMuted);
+  update(ref(db, `rooms/${roomId}/participants/${myId}`), { muted: localMuted });
+}
+
+/* ---------- 招待リンクコピー ---------- */
+function copyInviteLink(){
+  const url = `${location.origin}${location.pathname}?room=${roomId}`;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById("btn-copy-link");
+    const original = btn.textContent;
+    btn.textContent = "コピーしました";
+    setTimeout(() => btn.textContent = original, 1500);
+  }).catch(() => {
+    prompt("このURLをコピーしてください", url);
+  });
+}
+
+/* ---------- 描画: 参加者一覧 ---------- */
+function renderParticipants(){
+  const list = document.getElementById("participant-list");
+  const ids = Object.keys(participants);
+  list.innerHTML = "";
+
+  ids.forEach(pid => {
+    const p = participants[pid];
+    const isMe = pid === myId;
+    const row = document.createElement("div");
+    row.className = "participant";
+    row.id = `p-row-${pid}`;
+
+    const volumeControlHtml = isMe ? "" : `
+      <div class="volume-control">
+        <input type="range" min="0" max="200" value="100" data-peer="${pid}" class="volume-slider">
+        <span class="volume-val" id="vol-val-${pid}">100</span>
+      </div>`;
+
+    row.innerHTML = `
+      <div class="avatar" style="background:${avatarColor(p.name)}">${initials(p.name)}</div>
+      <div class="participant-info">
+        <div class="participant-name">
+          <span>${escapeHtml(p.name)}</span>
+          ${isMe ? '<span class="you-tag">(あなた)</span>' : ''}
+          <span class="mute-tag ${p.muted ? 'show':''}" id="mute-tag-${pid}">ミュート中</span>
+        </div>
+        <div class="participant-time" id="time-${pid}">00:00</div>
+      </div>
+      ${volumeControlHtml}
+    `;
+    list.appendChild(row);
+  });
+
+  document.querySelectorAll(".volume-slider").forEach(slider => {
+    slider.addEventListener("input", e => {
+      const pid = e.target.dataset.peer;
+      const val = Number(e.target.value);
+      document.getElementById(`vol-val-${pid}`).textContent = val;
+      const peerState = peers[pid];
+      if(peerState && peerState.gainNode) peerState.gainNode.gain.value = val / 100;
+    });
+  });
+
+  renderAllDurations();
+}
+
+function renderAllDurations(){
+  Object.keys(participants).forEach(pid => {
+    const el = document.getElementById(`time-${pid}`);
+    if(el) el.textContent = formatDuration(Date.now() - participants[pid].joinedAt);
+    const muteEl = document.getElementById(`mute-tag-${pid}`);
+    if(muteEl) muteEl.classList.toggle("show", !!participants[pid].muted);
+  });
+}
+
+/* ---------- 発話インジケーター ---------- */
+let localAnalyser = null;
+function setupLocalAnalyser(){
+  const source = audioCtx.createMediaStreamSource(localStream);
+  localAnalyser = audioCtx.createAnalyser();
+  localAnalyser.fftSize = 512;
+  source.connect(localAnalyser);
+}
+
+function getLevel(analyser){
+  if(!analyser) return 0;
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(data);
+  let sum = 0;
+  for(let i=0;i<data.length;i++) sum += data[i];
+  return sum / data.length;
+}
+
+function speakingLoop(){
+  const THRESHOLD = 12;
+  if(myId){
+    const meRow = document.getElementById(`p-row-${myId}`);
+    if(meRow){
+      const speaking = !localMuted && getLevel(localAnalyser) > THRESHOLD;
+      meRow.classList.toggle("speaking", speaking);
+    }
+    Object.keys(peers).forEach(pid => {
+      const row = document.getElementById(`p-row-${pid}`);
+      if(row){
+        const speaking = getLevel(peers[pid].analyser) > THRESHOLD;
+        row.classList.toggle("speaking", speaking);
+      }
+    });
+  }
+  requestAnimationFrame(speakingLoop);
+}
+
+init();
+</script>
+</body>
+</html>
