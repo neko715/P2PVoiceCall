@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>通話ルーム</title>
+<title>通話ルームv2</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -594,6 +594,21 @@ function connectToPeer(peerId, isInitiator){
   pc.ontrack = e => {
     console.log(`[ontrack][peer:${peerId}] received remote track:`, e.track.kind, "readyState:", e.track.readyState);
     const remoteStream = e.streams[0];
+
+    // ブラウザによっては、Web Audio APIのみの接続だとリモートストリームの
+    // 再生パイプラインが実際には起動しないことがあるため、
+    // ミュート状態のaudio要素を裏で再生させてパイプラインを有効化する。
+    // 実際に聞こえる音量・出力はWeb Audio API(GainNode)側で制御する。
+    const audioEl = document.createElement("audio");
+    audioEl.srcObject = remoteStream;
+    audioEl.autoplay = true;
+    audioEl.muted = true;
+    audioEl.playsInline = true;
+    audioEl.style.display = "none";
+    document.body.appendChild(audioEl);
+    audioEl.play().catch(err => console.warn(`[audioEl.play] failed for ${peerId}`, err));
+    peerState.audioEl = audioEl;
+
     const source = audioCtx.createMediaStreamSource(remoteStream);
     const gainNode = audioCtx.createGain();
     gainNode.gain.value = 1.0;
@@ -654,6 +669,11 @@ function cleanupPeer(peerId){
   const peerState = peers[peerId];
   if(peerState){
     peerState.pc.close();
+    if(peerState.audioEl){
+      peerState.audioEl.pause();
+      peerState.audioEl.srcObject = null;
+      peerState.audioEl.remove();
+    }
     delete peers[peerId];
   }
   delete participants[peerId];
