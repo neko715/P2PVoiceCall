@@ -225,6 +225,7 @@
       <h1>通話ルームを始める</h1>
       <p class="lead">ボタンひとつで部屋を作成できます。参加者にはURLを共有してください。</p>
       <button class="btn btn-primary" id="btn-create-room">部屋を建てる</button>
+      <button class="btn btn-ghost hidden" id="btn-rejoin">もう一度参加</button>
     </div>
   </section>
 
@@ -419,7 +420,34 @@ async function init(){
     showScreen("screen-join");
   } else {
     showScreen("screen-landing");
+    checkRejoinable();
   }
+}
+
+/* ---------- 直近に参加していた部屋がまだ通話中か確認 ---------- */
+async function checkRejoinable(){
+  const raw = localStorage.getItem("lastRoom");
+  if(!raw) return;
+  let lastRoom;
+  try{ lastRoom = JSON.parse(raw); }catch(e){ return; }
+  if(!lastRoom || !lastRoom.roomId) return;
+
+  try{
+    const metaSnap = await get(ref(db, `rooms/${lastRoom.roomId}/meta`));
+    if(!metaSnap.exists()){
+      localStorage.removeItem("lastRoom");
+      return;
+    }
+    const partSnap = await get(ref(db, `rooms/${lastRoom.roomId}/participants`));
+    const partData = partSnap.val() || {};
+    if(Object.keys(partData).length > 0){
+      const btn = document.getElementById("btn-rejoin");
+      btn.classList.remove("hidden");
+      btn.addEventListener("click", () => {
+        location.href = `${location.pathname}?room=${lastRoom.roomId}`;
+      });
+    }
+  }catch(e){ /* 確認に失敗しても何もしない */ }
 }
 
 /* ---------- 部屋作成 ---------- */
@@ -589,6 +617,9 @@ function drawPipFrame(){
 
 async function requestPipMode(){
   const videoEl = document.getElementById("pip-video");
+  if(!confirm("このボタンは音声に異常が発生した時のみ使用してください。続けますか？")){
+  return;
+}
   try{
     if(document.pictureInPictureElement){
       await document.exitPictureInPicture();
@@ -814,6 +845,9 @@ async function leaveRoom(){
       }
     }
   }catch(e){ /* 遷移は続行する */ }
+  if(roomId){
+    localStorage.setItem("lastRoom", JSON.stringify({ roomId, leftAt: Date.now() }));
+  }
   location.href = location.pathname;
 }
 
